@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>DevIAOps</title>
+
+<script src="./VSS.SDK.min.js"></script>
+
+<style>
+
+html,body{
+  height:100%;
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background:#ffffff;
+  color:#111;
+}
+
+body{
+  display:none;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+h1{
+  font-size:20px;
+  margin:0;
+}
+
+.subtitle{
+  font-size:12px;
+  color:#666;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:20px;
+}
+
+.card{
+  border:1px solid #e5e5e5;
+  border-radius:8px;
+  background:#fff;
+}
+
+.cardHeader{
+  padding:10px 14px;
+  border-bottom:1px solid #eee;
+  font-weight:600;
+}
+
+.chat{
+  height:420px;
+  overflow:auto;
+  padding:12px;
+}
+
+.message{
+  margin-bottom:12px;
+  max-width:80%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #eee;
+}
+
+.user{
+  margin-left:auto;
+  background:#f5f5f5;
+}
+
+.bot{
+  background:#fff;
+}
+
+.composer{
+  display:flex;
+  border-top:1px solid #eee;
+}
+
+textarea{
+  flex:1;
+  border:none;
+  padding:12px;
+  font-family:inherit;
+  resize:none;
+  outline:none;
+}
+
+button{
+  border:none;
+  padding:0 16px;
+  background:#0078d4;
+  color:white;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#0066b8;
+}
+
+.side{
+  padding:14px;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+
+.small{
+  font-size:12px;
+  color:#666;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+<div>
+<h1>DevIAOps</h1>
+<div class="subtitle">Azure DevOps automation</div>
+</div>
+
+<div id="apiInfo" class="small">API</div>
+</header>
+
+<div class="grid">
+
+<!-- CHAT -->
+
+<div class="card">
+
+<div class="cardHeader">
+Chat
+</div>
+
+<div id="chat" class="chat"></div>
+
+<div class="composer">
+<textarea id="input" placeholder="Ej: crear repo pagos-api"></textarea>
+<button id="send">Enviar</button>
+</div>
+
+</div>
+
+<!-- SIDE -->
+
+<div class="card">
+
+<div class="cardHeader">
+Acciones rápidas
+</div>
+
+<div class="side">
+
+<input id="repoName" placeholder="crear repo"/>
+
+<button id="btnCreateRepo">Crear repo</button>
+
+<hr/>
+
+<input id="repoBranch" placeholder="repo"/>
+<input id="branchName" placeholder="nueva rama"/>
+<input id="branchBase" placeholder="base (main)"/>
+
+<button id="btnCreateBranch">Crear rama</button>
+
+<div class="small" style="margin-top:12px">
+
+Ejemplos:
+
+<br/>
+
+crear repo pagos-api
+
+<br/>
+
+crear rama feature/ABC-123 desde main en repo pagos-api
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API_BASE="https://10.0.2.10/api"
+const API_KEY="super-secreto-123"
+
+VSS.init({explicitNotifyLoaded:true})
+
+VSS.ready(()=>{
+ document.body.style.display="block"
+ document.getElementById("apiInfo").innerText="API: "+API_BASE
+ VSS.notifyLoadSucceeded()
+})
+
+const chat=document.getElementById("chat")
+const input=document.getElementById("input")
+
+function addMessage(text,type){
+
+ const el=document.createElement("div")
+
+ el.className="message "+(type==="user"?"user":"bot")
+
+ el.textContent=text
+
+ chat.appendChild(el)
+
+ chat.scrollTop=chat.scrollHeight
+}
+
+async function sendMessage(msg){
+
+ addMessage(msg,"user")
+
+ const r=await fetch(API_BASE+"/chat",{
+   method:"POST",
+   headers:{
+     "Content-Type":"application/json",
+     "X-Api-Key":API_KEY
+   },
+   body:JSON.stringify({message:msg})
+ })
+
+ const data=await r.json()
+
+ addMessage(data.reply||"sin respuesta","bot")
+}
+
+document.getElementById("send").onclick=()=>{
+ const msg=input.value.trim()
+ if(!msg)return
+ input.value=""
+ sendMessage(msg)
+}
+
+input.addEventListener("keydown",e=>{
+ if(e.key==="Enter"&&!e.shiftKey){
+   e.preventDefault()
+   document.getElementById("send").click()
+ }
+})
+
+document.getElementById("btnCreateRepo").onclick=()=>{
+ const name=document.getElementById("repoName").value
+ if(!name)return
+ sendMessage("crear repo "+name)
+}
+
+document.getElementById("btnCreateBranch").onclick=()=>{
+ const r=document.getElementById("repoBranch").value
+ const n=document.getElementById("branchName").value
+ const b=document.getElementById("branchBase").value
+ if(!r||!n||!b)return
+ sendMessage(`crear rama ${n} desde ${b} en repo ${r}`)
+}
+
+addMessage("Hola 👋 Soy DevIAOps","bot")
+
+</script>
+
+</body>
+</html>

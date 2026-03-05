@@ -1,0 +1,34 @@
+{
+  "manifestVersion": 1,
+  "id": "ado-ai-chat-hub",
+  "version": "1.0.18",
+  "name": "AI Chat Hub",
+  "description": "AI-powered chat hub for Azure DevOps",
+  "publisher": "cvidalc",
+  "targets": [{ "id": "Microsoft.VisualStudio.Services" }],
+  "scopes": ["vso.work", "vso.code", "vso.build"],
+  "categories": ["Azure Pipelines"],
+  "icons": { "default": "images/icon.png" },
+  "files": [
+    { "path": "static", "addressable": true },
+    { "path": "images", "addressable": true }
+  ],
+  "contributions": [
+    {
+      "id": "ai-chat-group",
+      "type": "ms.vss-web.hub-group",
+      "targets": ["ms.vss-web.project-hub-groups-collection"],
+      "properties": { "name": "AI", "order": 100 }
+    },
+    {
+      "id": "ai-chat-hub",
+      "type": "ms.vss-web.hub",
+      "targets": [".ai-chat-group"],
+      "properties": {
+        "name": "AI Chat Hub",
+        "order": 1,
+        "uri": "static/hub.html"
+      }
+    }
+  ]
+}
