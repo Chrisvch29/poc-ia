@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "id": "ado-ai-chat-hub",
-  "version": "1.0.18",
+  "version": "1.0.27",
   "name": "AI Chat Hub",
   "description": "AI-powered chat hub for Azure DevOps",
   "publisher": "cvidalc",

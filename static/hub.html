@@ -1,288 +1,223 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8">
 <title>DevIAOps</title>
 
 <script src="./VSS.SDK.min.js"></script>
 
 <style>
-
-html,body{
-  height:100%;
+body{
+  font-family: Segoe UI, Arial;
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
   background:#ffffff;
   color:#111;
-}
-
-body{
   display:none;
 }
 
-.container{
-  max-width:1100px;
-  margin:auto;
-  padding:20px;
-}
-
 header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:20px;
-}
-
-h1{
-  font-size:20px;
-  margin:0;
-}
-
-.subtitle{
-  font-size:12px;
-  color:#666;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:20px;
-}
-
-.card{
-  border:1px solid #e5e5e5;
-  border-radius:8px;
-  background:#fff;
-}
-
-.cardHeader{
-  padding:10px 14px;
+  padding:12px 20px;
   border-bottom:1px solid #eee;
   font-weight:600;
 }
 
-.chat{
-  height:420px;
+#chat{
+  height:calc(100vh - 140px);
   overflow:auto;
-  padding:12px;
+  padding:20px;
 }
 
-.message{
-  margin-bottom:12px;
-  max-width:80%;
-  padding:10px 12px;
-  border-radius:8px;
-  border:1px solid #eee;
-}
-
-.user{
-  margin-left:auto;
-  background:#f5f5f5;
-}
-
-.bot{
-  background:#fff;
-}
-
-.composer{
+.msg{
+  max-width:800px;
+  margin:10px auto;
   display:flex;
+}
+
+.user{ justify-content:flex-end; }
+.bot{ justify-content:flex-start; }
+
+.bubble{
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:14px;
+  white-space:pre-wrap;
+}
+
+.user .bubble{
+  background:#0078d4;
+  color:white;
+}
+
+.bot .bubble{
+  background:#f2f2f2;
+}
+
+#composer{
   border-top:1px solid #eee;
+  padding:12px;
+  display:flex;
+  gap:10px;
 }
 
 textarea{
   flex:1;
-  border:none;
-  padding:12px;
-  font-family:inherit;
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  font-size:14px;
   resize:none;
-  outline:none;
+  height:40px;
 }
 
 button{
+  padding:10px 16px;
   border:none;
-  padding:0 16px;
   background:#0078d4;
   color:white;
+  border-radius:8px;
   cursor:pointer;
 }
 
 button:hover{
-  background:#0066b8;
+  background:#106ebe;
 }
 
-.side{
-  padding:14px;
+.quick{
+  padding:10px 20px;
+  border-bottom:1px solid #eee;
+  font-size:13px;
+  color:#555;
 }
 
-input{
-  width:100%;
-  padding:10px;
-  margin-bottom:10px;
-  border:1px solid #ddd;
-  border-radius:6px;
+.quick span{
+  cursor:pointer;
+  margin-right:10px;
+  color:#0078d4;
 }
-
-.small{
-  font-size:12px;
-  color:#666;
-}
-
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<header>DevIAOps</header>
 
-<header>
-<div>
-<h1>DevIAOps</h1>
-<div class="subtitle">Azure DevOps automation</div>
+<div class="quick">
+  <span onclick="sendQuick('crear repo pagos-api')">crear repo</span>
+  <span onclick="sendQuick('crear rama feature/demo desde develop en repo pagos-api')">crear rama</span>
+  <span onclick="sendQuick('elimina la rama feature/demo en repo pagos-api')">eliminar rama</span>
 </div>
 
-<div id="apiInfo" class="small">API</div>
-</header>
+<div id="chat"></div>
 
-<div class="grid">
-
-<!-- CHAT -->
-
-<div class="card">
-
-<div class="cardHeader">
-Chat
-</div>
-
-<div id="chat" class="chat"></div>
-
-<div class="composer">
-<textarea id="input" placeholder="Ej: crear repo pagos-api"></textarea>
-<button id="send">Enviar</button>
-</div>
-
-</div>
-
-<!-- SIDE -->
-
-<div class="card">
-
-<div class="cardHeader">
-Acciones rápidas
-</div>
-
-<div class="side">
-
-<input id="repoName" placeholder="crear repo"/>
-
-<button id="btnCreateRepo">Crear repo</button>
-
-<hr/>
-
-<input id="repoBranch" placeholder="repo"/>
-<input id="branchName" placeholder="nueva rama"/>
-<input id="branchBase" placeholder="base (main)"/>
-
-<button id="btnCreateBranch">Crear rama</button>
-
-<div class="small" style="margin-top:12px">
-
-Ejemplos:
-
-<br/>
-
-crear repo pagos-api
-
-<br/>
-
-crear rama feature/ABC-123 desde main en repo pagos-api
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
+<div id="composer">
+  <textarea id="input" placeholder="Escribe una acción DevOps..."></textarea>
+  <button onclick="send()">Enviar</button>
 </div>
 
 <script>
 
-const API_BASE="https://10.0.2.10/api"
-const API_KEY="super-secreto-123"
+const API = "http://127.0.0.1:3000/api/chat";
+const API_KEY = "super-secreto-123";  // tu API_KEY definida en backend
+const SESSION = "user-" + Math.random().toString(36).substring(2);
 
-VSS.init({explicitNotifyLoaded:true})
+VSS.init({ explicitNotifyLoaded:true, usePlatformStyles:true });
 
 VSS.ready(()=>{
- document.body.style.display="block"
- document.getElementById("apiInfo").innerText="API: "+API_BASE
- VSS.notifyLoadSucceeded()
-})
+  document.body.style.display="block";
+  VSS.notifyLoadSucceeded();
+});
 
-const chat=document.getElementById("chat")
-const input=document.getElementById("input")
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
 
-function addMessage(text,type){
+function add(text, who){
+  let row = document.createElement("div");
+  row.className = "msg " + who;
 
- const el=document.createElement("div")
+  let bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.innerText = text;
 
- el.className="message "+(type==="user"?"user":"bot")
-
- el.textContent=text
-
- chat.appendChild(el)
-
- chat.scrollTop=chat.scrollHeight
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
 }
 
-async function sendMessage(msg){
-
- addMessage(msg,"user")
-
- const r=await fetch(API_BASE+"/chat",{
-   method:"POST",
-   headers:{
-     "Content-Type":"application/json",
-     "X-Api-Key":API_KEY
-   },
-   body:JSON.stringify({message:msg})
- })
-
- const data=await r.json()
-
- addMessage(data.reply||"sin respuesta","bot")
+// Obtener token usuario Azure DevOps
+async function getUserToken(){
+  if(typeof VSS.getAccessToken === "function"){
+    try{
+      return await VSS.getAccessToken();
+    }catch{
+      return await new Promise(resolve=>{
+        VSS.getAccessToken(t => resolve(t));
+      });
+    }
+  }
+  return null;
 }
 
-document.getElementById("send").onclick=()=>{
- const msg=input.value.trim()
- if(!msg)return
- input.value=""
- sendMessage(msg)
+// Enviar mensaje al backend
+async function send(){
+  let text = input.value.trim();
+  if(!text) return;
+
+  add(text,"user");
+  input.value="";
+
+  try{
+    const token = await getUserToken();
+
+    const headers = {
+      "Content-Type": "application/json",
+      "X-Api-Key": API_KEY
+    };
+    if(token) headers["Authorization"] = "Bearer " + token;
+
+    let r = await fetch(API, {
+      method:"POST",
+      headers,
+      body: JSON.stringify({ session: SESSION, message: text })
+    });
+
+    let data = await r.json().catch(()=>({}));
+    if(!r.ok){
+      const msg = data.reply || ("HTTP " + r.status);
+      add("Error: " + msg, "bot");
+      return;
+    }
+
+    add(data.reply || "(sin respuesta)", "bot");
+
+  }catch(e){
+    add("Error conectando con DevIAOps", "bot");
+  }
 }
 
-input.addEventListener("keydown",e=>{
- if(e.key==="Enter"&&!e.shiftKey){
-   e.preventDefault()
-   document.getElementById("send").click()
- }
-})
-
-document.getElementById("btnCreateRepo").onclick=()=>{
- const name=document.getElementById("repoName").value
- if(!name)return
- sendMessage("crear repo "+name)
+function sendQuick(cmd){
+  input.value = cmd;
+  send();
 }
 
-document.getElementById("btnCreateBranch").onclick=()=>{
- const r=document.getElementById("repoBranch").value
- const n=document.getElementById("branchName").value
- const b=document.getElementById("branchBase").value
- if(!r||!n||!b)return
- sendMessage(`crear rama ${n} desde ${b} en repo ${r}`)
-}
+// Enter = enviar, Shift+Enter = salto de línea
+input.addEventListener("keydown", e => {
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    send();
+  }
+});
 
-addMessage("Hola 👋 Soy DevIAOps","bot")
+// Mensaje inicial del bot
+add(
+  "Hola 👋 soy DevIAOps.\n\n"+
+  "Puedo ejecutar acciones:\n"+
+  "- crear repo <nombre>\n"+
+  "- crear rama <rama> desde <base> en repo <repo>\n"+
+  "- eliminar ramas que NO sean develop/master\n\n"+
+  "Antes de ejecutar cualquier acción, siempre pediré confirmación.\n"+
+  "Describeme lo que necesitas y te guiaré.",
+  "bot"
+);
 
 </script>
 
