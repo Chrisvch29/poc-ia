@@ -1,0 +1,75 @@
+# ===== Rate limit zones =====
+# 10 requests/second por IP (ajusta). Burst permite picos cortos.
+limit_req_zone $binary_remote_addr zone=deviaops_rps:10m rate=10r/s;
+
+# Para limitar conexiones simultáneas por IP
+limit_conn_zone $binary_remote_addr zone=deviaops_conn:10m;
+
+server {
+  listen 443 ssl http2;
+  server_name 10.0.2.10;
+
+  # ===== TLS (tu cert self-signed actual) =====
+  ssl_certificate     /etc/nginx/certs/deviaops.crt;
+  ssl_certificate_key /etc/nginx/certs/deviaops.key;
+
+  # Buenas prácticas básicas
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+
+  # ===== Seguridad headers =====
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy no-referrer always;
+
+  # ===== Logs (opcional) =====
+  access_log /var/log/nginx/deviaops_access.log;
+  error_log  /var/log/nginx/deviaops_error.log warn;
+
+  # ===== Health (sin rate limit) =====
+  location = /health {
+    proxy_pass http://127.0.0.1:3000/api/health;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+  }
+
+  # ===== API =====
+  location ^~ /api/ {
+
+    # --- Rate limiting ---
+    limit_req zone=deviaops_rps burst=30 nodelay;
+    limit_conn deviaops_conn 20;
+
+    # --- CORS (solo Azure DevOps Server) ---
+    #add_header Access-Control-Allow-Origin "https://win-8krlq8i8iv4" always;
+    #add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+    #add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Api-Key" always;
+    #add_header Access-Control-Max-Age 86400 always;
+    #add_header Vary "Origin" always;
+
+    # Preflight
+    if ($request_method = OPTIONS) {
+      return 204;
+    }
+
+    # --- Proxy to Node ---
+    proxy_pass http://127.0.0.1:3000;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    # timeouts (si Ollama demora)
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 300s;
+
+    # tamaños (por si luego mandas payloads grandes)
+    client_max_body_size 2m;
+  }
+
+  # (Opcional) bloquear todo lo demás
+  location / {
+    return 404;
+  }
+}
